@@ -1,0 +1,99 @@
+#%%
+
+import requests  
+from lxml import etree
+import pandas as pd
+import random
+from bs4 import BeautifulSoup
+import os
+import time
+import json
+
+#%%
+
+def main():
+    url_start = "https://www.lagou.com/jobs/list_%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0?labelWords=&fromSearch=true&suginput="
+    url_parse = "https://www.lagou.com/jobs/positionAjax.json?needAddtionalResult=false"
+    headers = {
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Referer': 'https://www.lagou.com/jobs/list_%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0?labelWords=&fromSearch=true&suginput=  ',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+    }    
+    positions=[]
+    for x in range(1, 2):
+        print('正在抓取第{}页...'.format(x))
+        data = {
+            'first': 'true',
+            'pn': str(x),
+            'kd': '深度学习'
+                }
+        s = requests.Session() 
+        s.get(url_start, headers=headers, timeout=3)  
+        cookie = s.cookies  
+        response = s.post(url_parse, data=data, headers=headers, cookies=cookie, timeout=3)
+        time.sleep(3)
+        response.encoding = response.apparent_encoding
+        text = json.loads(response.text)       
+        info = text["content"]["positionResult"]["result"]
+        for i in info:
+            dict={
+            'companyname':i['positionName'],
+            'workexp':i['workYear'],
+            'edu':i['education'],
+            'money':i['salary'],
+            'adress':i['city'],
+            'nameFull':i['companyFullName'],
+            'businessZ':i['businessZones'],
+            'list':i['companyLabelList'],
+            'shape':i['financeStage'],
+            'number':i['companySize'],
+            'feltfare':i['positionAdvantage'],
+            'list2':i['industryField'],
+            'logo':i['companyLogo'],
+            }
+    
+            p_id=i['positionId']
+            dict['p_detail']=r_detail(p_id)
+            positions.append(dict)
+        time.sleep(3)
+    print('数据采集完毕.')
+    return  positions
+
+# 详情页
+def r_detail(p_id):
+    headers={
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+        'Host':'www.lagou.com',
+        'Referer':'https://www.lagou.com/jobs/list_%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0?labelWords=&fromSearch=true&suginput=',
+        'Cookie':'user_trace_token=20200115132833-ef96277a-2547-40a2-a293-9f75e454c538; _ga=GA1.2.1134579946.1579066113; LGUID=20200115132834-dfa00b99-3757-11ea-b2e1-525400f775ce; index_location_city=%E5%85%A8%E5%9B%BD; lagou_utm_source=B; LG_HAS_LOGIN=1; hasDeliver=0; privacyPolicyPopup=false; showExpriedIndex=1; showExpriedCompanyHome=1; showExpriedMyPublish=1; sensorsdata2015jssdkcross=%7B%22distinct_id%22%3A%2216fa7ae6dfe184-0d56f1fdbc6e6-6701b35-2073600-16fa7ae6dff578%22%2C%22%24device_id%22%3A%2216fa7ae6dfe184-0d56f1fdbc6e6-6701b35-2073600-16fa7ae6dff578%22%2C%22props%22%3A%7B%22%24latest_traffic_source_type%22%3A%22%E7%9B%B4%E6%8E%A5%E6%B5%81%E9%87%8F%22%2C%22%24latest_referrer%22%3A%22%22%2C%22%24latest_referrer_host%22%3A%22%22%2C%22%24latest_search_keyword%22%3A%22%E6%9C%AA%E5%8F%96%E5%88%B0%E5%80%BC_%E7%9B%B4%E6%8E%A5%E6%89%93%E5%BC%80%22%2C%22%24latest_utm_source%22%3A%22m_cf_cpt_baidu_pc1%22%7D%7D; gate_login_token=30c0f30048ed17ab3c8feb94a0f29fb6d0dfd8568770f7c83a7253780e696ed9; LG_LOGIN_USER_ID=6ce98c14043a1bcacfccecfe4c62dc4c8ff9fc91864d71878f7bdb1b7a1c3e83; _gat=1; LGSID=20200121105049-d477056c-3bf8-11ea-af1f-5254005c3644; PRE_UTM=m_cf_cpt_baidu_pcbt; PRE_HOST=sp0.baidu.com; PRE_SITE=https%3A%2F%2Fsp0.baidu.com%2F9q9JcDHa2gU2pMbgoY3K%2Fadrc.php%3Ft%3D06KL00c00fZNKw_0k2Ph0FNkUs0DuzuX00000F2xgNC00000uy86If.THL0oUhY1x60UWdBmy-bIfK15H-9P1nsuWN-nj0snvmsujb0IHYLwHndnWN7f1D4rDD4wDFDnjPAfWFAnRfvfHb1PjRYPfK95gTqFhdWpyfqn1n1nWfkn1nYnBusThqbpyfqnHmhIAYqniuB5HD0uHdCIZwsT1CEQLILIz4_myIEIi4WUvYEUA78uA-8uzdsmyI-QLKWQLP-mgFWpa4CIAd_5LNYUNq1ULNzmvRqUNqWu-qWTZwxmh7GuZNxTAPBI0KWThnqnHn1PHf%26tpl%3Dtpl_11534_21264_17382%26l%3D1516085138%26attach%3Dlocation%253D%2526linkName%253D%2525E6%2525A0%252587%2525E5%252587%252586%2525E5%2525A4%2525B4%2525E9%252583%2525A8-%2525E6%2525A0%252587%2525E9%2525A2%252598-%2525E4%2525B8%2525BB%2525E6%2525A0%252587%2525E9%2525A2%252598%2526linkText%253D%2525E3%252580%252590%2525E6%25258B%252589%2525E5%25258B%2525BE%2525E3%252580%252591-%252520%2525E4%2525BA%252592%2525E8%252581%252594%2525E7%2525BD%252591%2525E9%2525AB%252598%2525E8%252596%2525AA%2525E5%2525A5%2525BD%2525E5%2525B7%2525A5%2525E4%2525BD%25259C%2525EF%2525BC%25258C%2525E5%2525AE%25259E%2525E6%252597%2525B6%2525E6%25259B%2525B4%2525E6%252596%2525B0%21%2526xp%253Did%28%252522m3332413342_canvas%252522%29%25252FDIV%25255B1%25255D%25252FDIV%25255B1%25255D%25252FDIV%25255B1%25255D%25252FDIV%25255B1%25255D%25252FDIV%25255B1%25255D%25252FH2%25255B1%25255D%25252FA%25255B1%25255D%2526linkType%253D%2526checksum%253D232%26ie%3Dutf-8%26f%3D8%26tn%3Dbaidu%26wd%3D%25E6%258B%2589%25E5%258B%25BE%25E7%25BD%2591%26rqlang%3Dcn%26inputT%3D2239; PRE_LAND=https%3A%2F%2Fwww.lagou.com%2Flanding-page%2Fpc%2Fsearch.html%3Futm_source%3Dm_cf_cpt_baidu_pcbt; Hm_lvt_4233e74dff0ae5bd0a3d81c6ccf756e6=1579313721,1579322709,1579487416,1579575048; JSESSIONID=ABAAABAABGGAAFDF4000E806FD59B713A638646DBB6264C; WEBTJ-ID=20200121105053-16fc6028d2fe0-0b529ca15088bb-6701b35-2073600-16fc6028d30111; _putrc=CF44DC08A9B696D2123F89F2B170EADC; login=true; unick=%E7%94%A8%E6%88%B72012; _gid=GA1.2.1015663326.1579575054; TG-TRACK-CODE=index_search; X_HTTP_TOKEN=73cb4153420da89a57057597519522cdc257a2b587; LGRID=20200121105115-e42af335-3bf8-11ea-af1f-5254005c3644; Hm_lpvt_4233e74dff0ae5bd0a3d81c6ccf756e6=1579575075; SEARCH_ID=373d577bc44043e9ba27845f6f43c564'
+    }
+    url="https://www.lagou.com/jobs/%s.html?show=0cb366b91a3e4ec48236b05f2cd478d3" % p_id
+    result=requests.get(url,headers=headers)
+    time.sleep(3)
+    soup=BeautifulSoup(result.text,'html.parser')
+    job=soup.find(class_="job_bt")
+    
+    if job !=None:
+        job=job.text
+    else:
+        job='null'
+    print('正在抓取详情页{}...'.format(p_id))
+    return job
+
+#%%
+
+if __name__ == '__main__':
+    positions=main()
+
+#%%
+
+df=pd.DataFrame(positions)
+df.shape
+
+#%%
+
+df.to_csv('data深度学习.csv')
+
+#%%
+
+print(df)
